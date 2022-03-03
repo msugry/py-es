@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="{% static 'plugins...min.css' %}"
+          {% block css %}{% endblock %}
+</head>
+<h1>标题</h1>
+<body>
+<div>
+    {% block content %}{% endblock %}
+</div>
+<h1>底部</h1>
+
+<script src="{% static 'js/jquery-3.6.0.mmin.js' %}"></script>
+{% block js %}{% endblock %}
+</body>
+</html>
