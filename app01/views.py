@@ -1,3 +1,4 @@
+from django.core.validators import RegexValidator
 from django.shortcuts import render, redirect
 
 # Create your views here.
@@ -122,8 +123,10 @@ class UserModelForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # 循环找到所有的插件，添加class=""
+        # 循环找到所有的插件，添加class="form-control"
         for name, field in self.fields.items():
+            # if name == "password":
+            # continue
             field.widget.attrs = {"class": "form-control", "placeholder": field.label}
             # print(name,field)
 
@@ -167,8 +170,89 @@ def user_delete(request, nid):
     models.UserInfo.objects.filter(id=nid).delete()
     return redirect('/user/list/')
 
-def pretty_list(request):
-    """ 靓号列表 """
 
-    # select * from table by id asc;
-    models.PrettyNum.objects.all().order_by("-id")
+# def pretty_list(request):
+#     """ 靓号列表 """
+#
+#     # select * from table by id asc;
+#     models.PrettyNum.objects.all().order_by("-id")
+
+def pretty_list(request):
+    """靓号列表"""
+    # select * from table by level desc;
+    queryset = models.PrettyNum.objects.all().order_by("-level")
+    return render(request, 'pretty_list.html', {'queryset': queryset})
+
+
+from django.core.exceptions import ValidationError
+
+
+class PrettyModeForm(forms.ModelForm):
+    # 验证方法一
+    # 完成对于字符串的校验
+    # mobile = forms.CharField(
+    #     label="手机号",
+    #     validators=[RegexValidator(r'^1[3-9]\d{9}$', '手机号格式错误')],
+    # )
+
+    class Meta:
+        model = models.PrettyNum
+        # fields = "__all__"   # 表示所有字段
+        fields = ["mobile", 'price', 'level', 'status']  # 自定义字段
+        # exclude = ['level']  # 表示除此处字段以外所有字段
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            field.widget.attrs = {"class": "form-control", "placeholder": field.label}
+
+    # 验证方法二
+    def clean_mobile(self):
+        txt_mobile = self.cleaned_data["mobile"]
+        if len(txt_mobile) != 11:
+            # 验证不通过
+            raise ValidationError("格式错误")
+        # 验证通过,用户输入的值返回
+        return txt_mobile
+
+
+def pretty_add(request):
+    """添加靓号"""
+    if request.method == "GET":
+        form = PrettyModeForm()
+        return render(request, "pretty_add.html", {"form": form})
+    form = PrettyModeForm(data=request.POST)
+    if form.is_valid():
+        form.save()
+        return redirect('/pretty/list/')
+    return render(request, 'pretty_add.html', {"form": form})
+
+
+class PrettyEditModeForm(forms.ModelForm):
+    # mobile = forms.CharField(disabled=True, label="手机号")
+    mobile = forms.CharField(
+        label="手机号",
+        validators=[RegexValidator(r'^1[3-9]\d{9}$', '手机号格式错误')],
+    )
+    class Meta:
+        model = models.PrettyNum
+        fields = ['mobile', 'price', 'level', 'status']  # 自定义字段
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            field.widget.attrs = {"class": "form-control", "placeholder": field.label}
+
+
+def pretty_edit(request, nid):
+    """编辑靓号页面"""
+    row_object = models.PrettyNum.objects.filter(id=nid).first()
+
+    if request.method == "GET":
+        form = PrettyEditModeForm(instance=row_object)
+        return render(request, 'pretty_edit.html', {"form": form})
+    form = PrettyEditModeForm(data=request.POST,instance=row_object)
+    if form.is_valid():
+        form.save()
+        return redirect('/pretty/list/')
+    return render(request, 'pretty_edit.html', {"form": form})
